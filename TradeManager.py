@@ -12,6 +12,11 @@ from LiveTradingConfig import *
 import time
 from Helper import Trade
 from Logger import *
+import random
+import string
+
+def generate_random_string(length):
+    return ''.join(random.choices(string.ascii_letters, k=length))
 
 def calculate_custom_tp_sl(options):
     '''
@@ -308,7 +313,6 @@ class TradeManager:
             order_qty = round(order_qty, OP)
         if self.use_market_orders:
             try:
-                ##Could Make limit orders but for now the entry is a market
                 if trade_direction == 0:
                     order = self.client.futures_create_order(
                         symbol=symbol,
@@ -340,6 +344,7 @@ class TradeManager:
                         type=FUTURE_ORDER_TYPE_LIMIT,
                         price=entry_price,
                         timeInForce=TIME_IN_FORCE_GTC,
+                        newClientOrderId=f'{symbol}_order{generate_random_string(5)}',
                         quantity=order_qty)
                     order_id = order['orderId']
                 if trade_direction == 1:
@@ -349,6 +354,7 @@ class TradeManager:
                         type=FUTURE_ORDER_TYPE_LIMIT,
                         price=entry_price,
                         timeInForce=TIME_IN_FORCE_GTC,
+                        newClientOrderId=f'{symbol}_order',
                         quantity=order_qty)
                     order_id = order['orderId']
             except Exception as e:
@@ -394,6 +400,7 @@ class TradeManager:
                     price=TP_val,
                     stopPrice=TP_val,
                     timeInForce=TIME_IN_FORCE_GTC,
+                    newClientOrderId=f'{symbol}_take_profit_{generate_random_string(5)}',
                     reduceOnly='true',
                     quantity=TP[1])
                 TP_ID = order['orderId']
@@ -402,6 +409,7 @@ class TradeManager:
                     symbol=symbol,
                     side=order_side,
                     type='TRAILING_STOP_MARKET',
+                    newClientOrderId=f'{symbol}_take_profit_{generate_random_string(5)}',
                     ActivationPrice=TP_val,
                     callbackRate=self.trailing_stop_callback,
                     quantity=TP[1])
@@ -432,6 +440,7 @@ class TradeManager:
                 symbol=symbol,
                 side=order_side,
                 type=FUTURE_ORDER_TYPE_STOP_MARKET,
+                newClientOrderId=f'{symbol}_stop_loss_{generate_random_string(5)}',
                 reduceOnly='true',
                 stopPrice=SL,
                 quantity=quantity)
