@@ -1,6 +1,6 @@
 __pycache__
 .github
 venv
-.idea
+.idea/**
 ./back_testing/price_data/
 .env
