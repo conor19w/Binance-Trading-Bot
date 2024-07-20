@@ -332,7 +332,7 @@ class Bot:
         Trade_Direction = -99  ## Short (0), Long (1)
         stop_loss_val = -99  ##the margin of increase/decrease that would stop us out/ be our take profit, NOT the price target.
         take_profit_val = -99  # That is worked out later by adding or subtracting:
-        ## Strategies found in TradingStrats.py:
+        ## Strategies found in example_strategies.py:
         if self.strategy == 'StochRSIMACD':
             Trade_Direction = TS.StochRSIMACD(Trade_Direction, self.indicators["fastd"]["values"], self.indicators["fastk"]["values"],
                                               self.indicators["RSI"]["values"], self.indicators["MACD"]["values"],

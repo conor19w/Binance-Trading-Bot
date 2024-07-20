@@ -105,7 +105,7 @@ Part 2 for checking the live data against the historical, need to run the websoc
 # for d, o, c, h, l, v in zip(Date[0], Open[0], Close[0], High[0], Low[0], Volume[0]):
 #     print(f"{d}, Open: {o}, Close: {c}, High: {h}, Low: {l}, Volume: {v}")
 
-'''Test the Error in EMA when we throw away old values
+'''Test the Error in EMA when we throw away old-versions values
 Error is quite large at times, reduce by using a larger buffer by increasing the buffer_mult'''
 window_size = 1650
 buffer_mult = 1
@@ -125,7 +125,7 @@ for i in range(10000):
     j+=1
 
 
-'''Test the Error in SMA when we throw away old values,
+'''Test the Error in SMA when we throw away old-versions values,
     There is no error with SMAs'''
 #
 # window_size = 1650

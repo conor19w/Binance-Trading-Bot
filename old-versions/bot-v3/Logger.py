@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 import colorlog
-from trading_config import LOG_LEVEL, log_to_file
+from LiveTradingConfig import LOG_LEVEL, log_to_file
 import os
 import sys
 

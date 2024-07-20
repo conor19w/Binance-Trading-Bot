@@ -2,9 +2,9 @@ from ta.momentum import stochrsi_d, stochrsi_k, stoch, stoch_signal, rsi
 from ta.trend import ema_indicator, macd_signal, macd, sma_indicator
 from ta.volatility import average_true_range, bollinger_pband
 import pandas as pd
-import TradingStrats as TS
+import example_strategies as TS
 from Logger import *
-from LiveTradingConfig import custom_tp_sl_functions, make_decision_options, wait_for_candle_close
+from trading_config import custom_tp_sl_functions, make_decision_options, wait_for_candle_close
 
 
 
@@ -316,7 +316,7 @@ class Bot:
         trade_direction = -99  ## Short (0), Long (1)
         stop_loss_val = -99
         take_profit_val = -99
-        ## Strategies found in TradingStrats.py:
+        ## Strategies found in example_strategies.py:
         try:
             match self.strategy:
                 case 'StochRSIMACD':

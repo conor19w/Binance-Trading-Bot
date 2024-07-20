@@ -9,7 +9,7 @@ or [Buy me a Coffee](https://www.buymeacoffee.com/conor19w)
 # This Bot currently only works on windows OS, in future I hope to support linux but I don't have the time right now
 ___
 #### This Bot utilizes: ####
-* [python-binance](https://python-binance.readthedocs.io/en/latest/) Client to execute orders and pull data from Binance
+* [python-Binance](https://python-binance.readthedocs.io/en/latest/) Client to execute orders and pull data from Binance
 * [ta](https://technical-analysis-library-in-python.readthedocs.io/en/latest/) library for Technical indicators
 * [plotly](https://plotly.com/graphing-libraries/) for generating interactive Trade graphs.  
 * [tabulate](https://pypi.org/project/tabulate/) for logging trades in a table format
