@@ -5,4 +5,3 @@ venv
 ./back_testing/price_data/
 .env
 run_linter.py
-Makefile
