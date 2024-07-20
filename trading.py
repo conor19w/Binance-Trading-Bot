@@ -4,7 +4,6 @@ from trading_config import *
 from trading_config import symbols_to_trade  # explicitly importing to remove a warning
 from trading_config import buffer  # explicitly importing to remove a warning
 
-import shared_helper
 from helper import *
 from trade_manager import *
 from threading import Thread

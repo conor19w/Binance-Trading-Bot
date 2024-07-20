@@ -7,20 +7,17 @@ from Logger import *
 from trading_config import custom_tp_sl_functions, make_decision_options, wait_for_candle_close
 
 
-
 class Bot:
-    def __init__(self, symbol: str, Open: [float], Close: [float], High: [float], Low: [float], Volume: [float], Date: [str], OP: int, CP: int, index: int, tick: float,
-                 strategy: str, TP_SL_choice: str, SL_mult: float, TP_mult: float, backtesting=0, signal_queue=None, print_trades_q=None):
+    def __init__(self, symbol: str, open_price: [float], close_price: [float], high_price: [float], low_price: [float], volume: [float], time_open: [str], time_close: [str],
+                 OP: int, CP: int, index: int, tick_size: float, backtesting=0, signal_queue=None, print_trades_q=None):
         self.symbol = symbol
-        self.Date = Date
-
-        # Remove extra candle if present TODO check if needed
-        shortest = min(len(Open), len(Close), len(High), len(Low), len(Volume))
-        self.Open = Open[-shortest:]
-        self.Close = Close[-shortest:]
-        self.High = High[-shortest:]
-        self.Low = Low[-shortest:]
-        self.Volume = Volume[-shortest:]
+        self.time_open = time_open
+        self.time_close = time_close
+        self.open = open_price
+        self.close = close_price
+        self.high = high_price
+        self.low = low_price
+        self.volume = volume
 
         self.OP = OP
         self.CP = CP

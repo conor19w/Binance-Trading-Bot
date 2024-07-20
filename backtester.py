@@ -9,11 +9,11 @@ from copy import copy
 import pandas as pd
 import numpy as np
 import helper
-from Bot_Class import Bot
-from Config_File import API_KEY, API_SECRET
+from bot import Bot
+from trading_config import API_KEY, API_SECRET
 from helper import Trade
 import matplotlib
-time_delta = timedelta(hours=1)  ## Adjust time for printing based off GMT (This is GMT+1)
+time_delta = timedelta(hours=1)
 
 def run_backtester(account_balance_start, leverage, order_size,  start, end, TIME_INTERVAL, Number_Of_Trades,
                    Trade_All_Symbols, Trade_Each_Coin_With_Separate_Accounts, only_show_profitable_coins,
