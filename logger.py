@@ -6,6 +6,30 @@ import os
 import sys
 
 
+class Logger:
+    def __init__(self):
+        logger = get_logger()
+        self.info = logger.info
+        self.error = logger.error
+        self.debug = logger.debug
+        self.warning = logger.warning
+
+    def catch_errors(self):
+        '''Decorator to catch and log error messages'''
+        def decorator(func):
+            def wrapper(*args, **kwargs):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    self.error(f'{func.__name__}() - Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}')
+
+            return wrapper
+
+        return decorator
+
+
 def get_logger():
     # Create a logger and set its level to LOG_LEVEL
     log = logging.getLogger()
@@ -44,5 +68,4 @@ def get_logger():
     return log
 
 
-log = get_logger()
-
+log = Logger()

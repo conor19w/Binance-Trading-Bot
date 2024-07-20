@@ -13,15 +13,15 @@ import os
 
 
 if __name__ == '__main__':
-    log.info(f'Configuration:\ntrading strategy: {trading_strategy}\nleverage: {leverage}\norder size: {order_size}\n'
-             f'interval: {interval}\nTP/SL choice: {TP_SL_choice}\nSL mult: {SL_mult}\nTP mult: {TP_mult}\n'
-             f'trade all symbols: {trade_all_symbols}\nsymbols to trade: {symbols_to_trade}\nuse trailing stop: {use_trailing_stop}\n'
-             f'trailing stop callback: {trailing_stop_callback}\ntrading threshold: {trading_threshold}\nuse market orders: {use_market_orders}\n'
-             f'max number of positions: {max_number_of_positions}\nuse multiprocessing for trade execution: {use_multiprocessing_for_trade_execution}\n'
-             f'custom TP/SL Functions: {custom_tp_sl_functions}\nmake decision options: {make_decision_options}\n')
+    # log.info(f'Configuration:\ntrading strategy: {trading_strategy}\nleverage: {leverage}\norder size: {order_size}\n'
+    #          f'interval: {interval}\nTP/SL choice: {TP_SL_choice}\nSL mult: {SL_mult}\nTP mult: {TP_mult}\n'
+    #          f'trade all symbols: {trade_all_symbols}\nsymbols to trade: {symbols_to_trade}\nuse trailing stop: {use_trailing_stop}\n'
+    #          f'trailing stop callback: {trailing_stop_callback}\ntrading threshold: {trading_threshold}\nuse market orders: {use_market_orders}\n'
+    #          f'max number of positions: {max_number_of_positions}\nuse multiprocessing for trade execution: {use_multiprocessing_for_trade_execution}\n'
+    #          f'custom TP/SL Functions: {custom_tp_sl_functions}\nmake decision options: {make_decision_options}\n')
 
     pp = PrettyPrinter()  ##for printing json text cleanly (inspect binance API call returns)
-    Bots: [BotClass.Bot] = []
+    Bots: [Bot] = []
     signal_queue = None
     print_trades_q = None
     if use_multiprocessing_for_trade_execution:
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     python_binance_client = Client(api_key=API_KEY, api_secret=API_SECRET)
     client = CustomClient(python_binance_client)
     if trade_all_symbols:
-        symbols_to_trade = SharedHelper.get_all_symbols(python_binance_client, coin_exclusion_list)
+        symbols_to_trade = get_all_symbols(python_binance_client, coin_exclusion_list)
 
     client.set_leverage(symbols_to_trade)
 
@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     if auto_calculate_buffer:
         ## auto-calculate the required buffer size
-        buffer_int = SharedHelper.get_required_buffer(trading_strategy)
+        buffer_int = get_required_buffer(trading_strategy)
         buffer = convert_buffer_to_string(buffer_int)
     ## Combine data collected from websockets with historical data, so we have a buffer of data to calculate signals
     combine_data_thread = Thread(target=client.combine_data, args=(Bots, symbols_to_trade, buffer))
