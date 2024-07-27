@@ -1,13 +1,15 @@
+import asyncio
+
 from binance.client import Client
 
 from bot import Bot
 from trading_config import *
 from binance import ThreadedWebsocketManager
-import time
 from logger import *
 import numpy as np
 
 
+@log.catch_errors()
 def get_all_symbols(client, coin_exclusion_list):
     ''' Function that returns the list of trade-able USDT symbols & removes coins you've added to your exclusion list in live_trading_config.py '''
     x = client.futures_exchange_info()['symbols']
@@ -19,21 +21,16 @@ def get_all_symbols(client, coin_exclusion_list):
 
 def compare_indicators(keys, indicators_buffer, indicators_actual):
     ''' Function to compare the indicators for calculating the required buffer size '''
-    try:
-        error_percent = []
-        for key in keys:
-            if isinstance(indicators_buffer[key]['values'], list):
-                error_percent.append(abs(sum([(actual - buffer) / actual for actual, buffer in zip(indicators_actual[key]['values'][-30:], indicators_buffer[key]['values'][-30:])])))
-            else:
-                error_percent.append((indicators_actual[key]['values'] - indicators_buffer[key]['values']) / indicators_actual[key]['values'])
-        return sum(error_percent) / len(keys)
-    except Exception as e:
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        log.warning(f"compare_indicators() - Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
+    error_percent = []
+    for key in keys:
+        if isinstance(indicators_buffer[key]['values'], list):
+            error_percent.append(abs(sum([(actual - buffer) / actual for actual, buffer in zip(indicators_actual[key]['values'][-30:], indicators_buffer[key]['values'][-30:])])))
+        else:
+            error_percent.append((indicators_actual[key]['values'] - indicators_buffer[key]['values']) / indicators_actual[key]['values'])
+    return sum(error_percent) / len(keys)
 
 
-def get_required_buffer(trading_strategy):
+def get_required_buffer():
     ''' Function to calculate the buffer for your strategy to use, ensuring accurate signals '''
     log.info('get_required_buffer() - Calculating the required buffer for your strategy...')
     # Create an array of random float elements
@@ -49,16 +46,15 @@ def get_required_buffer(trading_strategy):
     ran_arr_volume = np.random.uniform(size=20000, low=2, high=100_000_000)
 
     actual_values_bot = Bot('actual_values_bot', ran_arr_open, ran_arr_close, ran_arr_high,
-                                ran_arr_low, ran_arr_volume, [], 3, 4, 0, 1, trading_strategy, '%',
-                                1, 1, 1)
+                                ran_arr_low, ran_arr_volume, [], [], 4,
+                                0, 1, 1, 1)
     buffer_bot: Bot
     for i in range(30, 20000):
         try:
             # Calculate indicators for this size of buffer
             buffer_bot = Bot('buffer_bot', ran_arr_open[-i:], ran_arr_close[-i:], ran_arr_high[-i:],
-                                       ran_arr_low[-i:], ran_arr_volume[-i:], [], 3, 4, 0, 1, trading_strategy,
-                                       '%',
-                                       1, 1, 1)
+                                ran_arr_low[-i:], ran_arr_volume[-i:], [], 3, 4,
+                                0, 1, 1, 1)
             # Compare the indicators of actual_values_bot & buffer_bot until the error % is less than .1%
             keys = buffer_bot.indicators.keys()
             error_percent = compare_indicators(keys, buffer_bot.indicators, actual_values_bot.indicators)
@@ -71,42 +67,39 @@ def get_required_buffer(trading_strategy):
             log.warning(f"get_required_buffer() - Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
 
 
+@log.catch_errors()
 def convert_buffer_to_string(buffer_int):
     ''' Function that converts the candle number to a String in hours/days to pass to binance'''
-    try:
-        unit_of_time = interval[-1]
-        unit_in_minutes: int
-        match unit_of_time:
-            case 'm':
-                unit_in_minutes = int(interval[:-1])
-            case 'h':
-                unit_in_minutes = int(interval[:-1]) * 60
-            case 'd':
-                unit_in_minutes = int(interval[:-1]) * 1440
-            case _:
-                unit_in_minutes = 1
+    unit_of_time = interval[-1]
+    unit_in_minutes: int
+    match unit_of_time:
+        case 'm':
+            unit_in_minutes = int(interval[:-1])
+        case 'h':
+            unit_in_minutes = int(interval[:-1]) * 60
+        case 'd':
+            unit_in_minutes = int(interval[:-1]) * 1440
+        case _:
+            unit_in_minutes = 1
 
-        number_of_minutes_required = unit_in_minutes * buffer_int
-        hours_required = int(np.ceil(number_of_minutes_required / 60))
-        if hours_required < 24:
-            log.info(f'convert_buffer_to_string() - required buffer calculated is {hours_required} hours ago')
-            return f'{hours_required} hours ago'
-        else:
-            days_required = int(np.ceil(hours_required / 24))
-            log.info(f'convert_buffer_to_string() - required buffer calculated is {days_required} days ago')
-            return f'{days_required} days ago'
-    except Exception as e:
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        log.warning(f"convert_buffer_to_string() - Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
+    number_of_minutes_required = unit_in_minutes * buffer_int
+    hours_required = int(np.ceil(number_of_minutes_required / 60))
+    if hours_required < 24:
+        log.info(f'convert_buffer_to_string() - required buffer calculated is {hours_required} hours ago')
+        return f'{hours_required} hours ago'
+    else:
+        days_required = int(np.ceil(hours_required / 24))
+        log.info(f'convert_buffer_to_string() - required buffer calculated is {days_required} days ago')
+        return f'{days_required} days ago'
 
 
 class CustomClient:
-    def __init__(self, client: Client):
+    def __init__(self, client: Client, user_socket_q):
         self.client = client
         self.leverage = leverage
         self.twm = ThreadedWebsocketManager(api_key=API_KEY, api_secret=API_SECRET)
         self.number_of_bots = 0
+        self.user_socket_q = user_socket_q
 
     def set_leverage(self, symbols_to_trade: [str]):
         ''' Function that sets the leverage for each coin as specified in live_trading_config.py '''
@@ -139,11 +132,15 @@ class CustomClient:
                 log.warning(f"start_websockets() - Symbol: {bots[i].symbol}, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
                 bots.pop(i)
         self.number_of_bots = len(bots)
+        self.twm.start_futures_user_socket(callback=self.send_to_user_socket_q)
 
-    def ping_server_reconnect_sockets(self, bots: [Bot]):
+    def send_to_user_socket_q(self, msg):
+        self.user_socket_q.put(msg)
+
+    async def ping_server_reconnect_sockets(self, bots: [Bot]):
         ''' Loop that runs constantly, it pings the server every 15 seconds, so we don't lose connection '''
         while True:
-            time.sleep(15)
+            await asyncio.sleep(15)
             self.client.futures_ping()
             for bot in bots:
                 if bot.socket_failed:
@@ -180,7 +177,8 @@ class CustomClient:
             if flag == 1:
                 bots.append(
                     Bot(symbol=symbols_to_trade[i], open_price=[], close_price=[], high_price=[], low_price=[], volume=[], time_open=[], time_close=[],
-                        order_precision=order_precision, coin_precision=symbol_precision, index=i, tick_size=tick_size, signal_queue=signal_queue, print_trades_q=print_trades_q))
+                        order_precision=order_precision, coin_precision=symbol_precision, index=i, tick_size=tick_size,
+                        signal_queue=signal_queue, print_trades_q=print_trades_q))
                 i += 1
             else:
                 log.info(f"setup_bots() - {symbols_to_trade[i]} no symbol info found, removing symbol")
@@ -192,25 +190,28 @@ class CustomClient:
                     log.warning(f"setup_bots() - Error occurred removing symbol, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
         log.info("setup_bots() - Bots have completed setup")
 
-    def combine_data(self, bots: [Bot], symbols_to_trade: [str], buffer):
-        ''' Function that pulls in historical data so we have candles for the Bot to start trading immediately '''
+    async def combine_data(self, bots: [Bot], symbols_to_trade: [str], buffer):
+        ''' Function that pulls in historical data, so we have candles for the Bot to start trading immediately '''
         log.info("combine_data() - Combining Historical and web socket data...")
         i = 0
         while i < len(bots):
+            await asyncio.sleep(1)
             log.info(f"combine_data() - ({i + 1}/{len(bots)}) Gathering and combining data for {bots[i].symbol}...")
-            date_temp, open_temp, close_temp, high_temp, low_temp, volume_temp = self.get_historical(
+            time_open, time_close, open_temp, close_temp, high_temp, low_temp, volume_temp = self.get_historical(
                 symbol=bots[i].symbol, buffer=buffer)
+            await asyncio.sleep(1)
             try:
-                # TODO test this
-                date_temp.pop(-1)
+                time_open.pop(-1)
+                time_close.pop(-1)
                 open_temp.pop(-1)
                 close_temp.pop(-1)
                 high_temp.pop(-1)
                 low_temp.pop(-1)
                 volume_temp.pop(-1)
-                bots[i].add_hist(time_open=date_temp, open_price=open_temp, close_price=close_temp, high_price=high_temp,
+                bots[i].add_hist(time_open=time_open, time_close=time_close, open_price=open_temp, close_price=close_temp, high_price=high_temp,
                                  low_price=low_temp, volume_price=volume_temp)
                 i += 1
+                await asyncio.sleep(1)
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -226,6 +227,7 @@ class CustomClient:
                     log.warning(f"combine_data() - Error occurred removing symbol, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
         log.info("combine_data() - Finished Combining data for all symbols, Searching for trades now...")
 
+    @log.catch_errors()
     def get_historical(self, symbol: str, buffer):
         ''' Function that pulls the historical data for a symbol '''
         open_price = []
@@ -234,32 +236,25 @@ class CustomClient:
         close_price = []
         volume = []
         time_open = []
-        try:
-            for kline in self.client.futures_historical_klines(symbol, interval, start_str=buffer):
-                time_open.append(int(kline[6])) # TODO check if this is right, also need close time
-                open_price.append(float(kline[1]))
-                close_price.append(float(kline[4]))
-                high_price.append(float(kline[2]))
-                low_price.append(float(kline[3]))
-                volume.append(float(kline[7]))
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            log.error(
-                f'get_historical() - Error occurred for symbol: {symbol}, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}')
-        return time_open, open_price, close_price, high_price, low_price, volume
+        time_close = []
+        for kline in self.client.futures_historical_klines(symbol, interval, start_str=buffer):
+            time_open.append(int(kline[0]))
+            time_close.append(int(kline[6]))
+            open_price.append(float(kline[1]))
+            close_price.append(float(kline[4]))
+            high_price.append(float(kline[2]))
+            low_price.append(float(kline[3]))
+            volume.append(float(kline[7]))
 
+        return time_open, time_close, open_price, close_price, high_price, low_price, volume
+
+    @log.catch_errors()
     def get_account_balance(self):
         ''' Function that returns the USDT balance of the account '''
-        try:
-            account_balance_info = self.client.futures_account_balance()
-            for x in account_balance_info:
-                if x['asset'] == 'USDT':
-                    return float(x['balance'])
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            log.error(f'get_account_balance() - error getting account balance, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}')
+        account_balance_info = self.client.futures_account_balance()
+        for x in account_balance_info:
+            if x['asset'] == 'USDT':
+                return float(x['balance'])
 
 
 class Trade:

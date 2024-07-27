@@ -46,11 +46,11 @@ class Bot:
         self.first_interval = False
         self.pop_previous_value = False
 
-    @log.catch_errors
+    @log.catch_errors()
     def update_indicators(self):
         ## Calculate indicators
         match self.strategy:
-            case 'StochRSIMACD':
+            case 'stoch_rsi_macd':
                 close_series = pd.Series(self.close)
                 high_series = pd.Series(self.high)
                 low_series = pd.Series(self.low)
@@ -58,14 +58,14 @@ class Bot:
                                              "plotting_axis": 3},
                                    "fastk": {"values": list(stoch_signal(close=close_series, high=high_series, low=low_series)),
                                              "plotting_axis": 3},
-                                   "RSI": {"values": list(rsi(close_series)),
+                                   "rsi": {"values": list(rsi(close_series)),
                                            "plotting_axis": 4},
-                                   "MACD": {"values": list(macd(close_series)),
+                                   "macd": {"values": list(macd(close_series)),
                                             "plotting_axis": 5},
                                    "macdsignal": {"values": list(macd_signal(close_series)),
                                                   "plotting_axis": 5}
                 }
-            case 'tripleEMAStochasticRSIATR':
+            case 'triple_ema_stochastic_rsi_atr':
                 close_series = pd.Series(self.close)
                 self.indicators = { "EMA_L": {"values": list(ema_indicator(close_series, window=100)),
                                               "plotting_axis": 1},
@@ -78,7 +78,7 @@ class Bot:
                                     "fastk": {"values": list(stochrsi_k(close_series)),
                                               "plotting_axis": 3}
                 }
-            case 'tripleEMA':
+            case 'triple_ema':
                 close_series = pd.Series(self.close)
                 self.indicators = {"EMA_L": {"values": list(ema_indicator(close_series, window=50)),
                                              "plotting_axis": 1},
@@ -97,7 +97,7 @@ class Bot:
                                   "max Volume": {"values": list(volume_series.rolling(10).max()),
                                               "plotting_axis": 2}
                 }
-            case 'stochBB':
+            case 'stoch_bb':
                 close_series = pd.Series(self.close)
                 self.indicators = {"fastd": {"values": list(stochrsi_d(close_series)),
                                              "plotting_axis": 3},
@@ -106,7 +106,7 @@ class Bot:
                                    "percent_B": {"values": list(bollinger_pband(close_series)),
                                                  "plotting_axis": 4}
                 }
-            case 'goldenCross':
+            case 'golden_cross':
                 close_series = pd.Series(self.close)
                 self.indicators = {"EMA_L": {"values": list(ema_indicator(close_series, window=100)),
                                              "plotting_axis": 1},
@@ -117,7 +117,7 @@ class Bot:
                                    "RSI": {"values": list(rsi(close_series)),
                                            "plotting_axis": 3}
                 }
-            case 'fibMACD':
+            case 'fib_macd':
                 close_series = pd.Series(self.close)
                 self.indicators = {"MACD_signal": {"values": list(macd_signal(close_series)),
                                                    "plotting_axis": 3},
@@ -126,7 +126,7 @@ class Bot:
                                    "EMA": {"values": list(sma_indicator(close_series, window=200)),
                                            "plotting_axis": 1}
                 }
-            case 'EMA_cross':
+            case 'ema_cross':
                 close_series = pd.Series(self.close)
                 self.indicators = {"EMA_S": {"values": list(ema_indicator(close_series, window=5)),
                                              "plotting_axis": 1},
@@ -163,7 +163,7 @@ class Bot:
             case _:
                 return
 
-    @log.catch_errors
+    @log.catch_errors()
     def update_tp_sl(self):
         match self.tp_sl_choice:
             case '%':
@@ -217,19 +217,29 @@ class Bot:
             case _:
                 return
 
-    @log.catch_errors
-    def add_hist(self, time_open: [float], open_price: [float], close_price: [float], high_price: [float], low_price: [float], volume_price: [str]):
+    @log.catch_errors()
+    def add_hist(self, time_open: [int], time_close: [int], open_price: [float], close_price: [float], high_price: [float], low_price: [float], volume_price: [str]):
         if not self.backtesting:
-            while 0 < len(self.time_open):
+            while not len(self.time_open) == 0:
                 if self.time_open[0] > time_open[-1]:
                     time_open.append(self.time_open.pop(0))
+                    time_close.append(self.time_close.pop(0))
                     open_price.append(self.open.pop(0))
                     close_price.append(self.close.pop(0))
                     high_price.append(self.high.pop(0))
                     low_price.append(self.low.pop(0))
                     volume_price.append(self.volume.pop(0))
+                elif self.time_open[0] == time_open[-1]:
+                    time_open[-1] = self.time_open.pop(0)
+                    time_close[-1] = self.time_close.pop(0)
+                    open_price[-1] = self.open.pop(0)
+                    close_price[-1] = self.close.pop(0)
+                    high_price[-1] = self.high.pop(0)
+                    low_price[-1] = self.low.pop(0)
+                    volume_price[-1] = self.volume.pop(0)
                 else:
                     self.time_open.pop(0)
+                    self.time_close.pop(0)
                     self.open.pop(0)
                     self.close.pop(0)
                     self.high.pop(0)
@@ -269,8 +279,8 @@ class Bot:
                         if trade_direction != -99:
                             self.signal_queue.put([self.symbol, self.order_precision, self.coin_precision, self.tick_size, trade_direction, self.index, stop_loss_val, take_profit_val])
                         self.remove_first_candle()
-                    if self.index == 0:
-                        self.print_trades_q.put(True)
+                        if self.index == 0:
+                            self.print_trades_q.put(True)
                     if not self.first_interval:
                         self.first_interval = True
                     self.pop_previous_value = False
@@ -289,7 +299,7 @@ class Bot:
             log.warning(f"handle_socket_message() - Error in handling of {self.symbol} websocket flagging for reconnection, msg: {msg}, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
             self.socket_failed = True
 
-    @log.catch_errors
+    @log.catch_errors()
     def make_decision(self):
         self.update_indicators()
         ##Initialize vars:
@@ -298,35 +308,35 @@ class Bot:
         take_profit_val = -99
         
         match self.strategy:
-            case 'StochRSIMACD':
-                trade_direction = TS.StochRSIMACD(trade_direction, self.indicators["fastd"]["values"], self.indicators["fastk"]["values"],
+            case 'stoch_rsi_macd':
+                trade_direction = TS.stoch_rsi_macd(trade_direction, self.indicators["fastd"]["values"], self.indicators["fastk"]["values"],
                                                   self.indicators["RSI"]["values"], self.indicators["MACD"]["values"],
                                                   self.indicators["macdsignal"]["values"], self.current_index)
-            case 'tripleEMAStochasticRSIATR':
-                trade_direction = TS.tripleEMAStochasticRSIATR(self.close, trade_direction, self.indicators["EMA_L"]["values"],
+            case 'triple_ema_stochastic_rsi_atr':
+                trade_direction = TS.triple_ema_stochastic_rsi_atr(self.close, trade_direction, self.indicators["EMA_L"]["values"],
                                                                self.indicators["EMA_M"]["values"], self.indicators["EMA_S"]["values"],
                                                                self.indicators["fastd"]["values"], self.indicators["fastk"]["values"], self.current_index)
-            case 'tripleEMA':
+            case 'triple_ema':
                 trade_direction = TS.triple_ema(trade_direction, self.indicators["EMA_S"]["values"],
                                                 self.indicators["EMA_M"]["values"], self.indicators["EMA_L"]["values"], self.current_index)
             case 'breakout':
                 trade_direction = TS.breakout(trade_direction, self.close, self.volume, self.indicators["max Close % change"]["values"],
                                               self.indicators["min Close % change"]["values"], self.indicators["max Volume"]["values"],
                                               self.current_index)
-            case 'stochBB':
+            case 'stoch_bb':
                 trade_direction = TS.stoch_bb(trade_direction, self.indicators["fastd"]["values"],
                                               self.indicators["fastk"]["values"], self.indicators["percent_B"]["values"], self.current_index)
-            case 'goldenCross':
+            case 'golden_cross':
                 trade_direction = TS.golden_cross(trade_direction, self.close, self.indicators["EMA_L"]["values"],
                                                   self.indicators["EMA_M"]["values"], self.indicators["EMA_S"]["values"],
                                                   self.indicators["RSI"]["values"], self.current_index)
             case 'candle_wick':
                 trade_direction = TS.candle_wick(trade_direction, self.close, self.open, self.high, self.low, self.current_index)
-            case 'fibMACD':
+            case 'fib_macd':
                 trade_direction = TS.fib_macd(trade_direction, self.close, self.open, self.high, self.low, self.indicators["MACD_signal"]["values"],
                                               self.indicators["MACD"]["values"], self.indicators["EMA"]["values"], self.current_index)
-            case 'EMA_cross':
-                trade_direction = TS.EMA_cross(trade_direction, self.indicators["EMA_S"]["values"],
+            case 'ema_cross':
+                trade_direction = TS.ema_cross(trade_direction, self.indicators["EMA_S"]["values"],
                                                self.indicators["EMA_L"]["values"], self.current_index)
             case 'heikin_ashi_ema2':
                 trade_direction, _ = TS.heikin_ashi_ema2(self.open_h, self.high_h, self.low_h, self.close_h, trade_direction,
@@ -354,7 +364,7 @@ class Bot:
 
         return trade_direction, stop_loss_val, take_profit_val
 
-    @log.catch_errors
+    @log.catch_errors()
     def check_close_pos(self, trade_direction):
         close_pos = 0
         match self.strategy:
