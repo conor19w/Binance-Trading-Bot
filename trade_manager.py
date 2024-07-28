@@ -42,15 +42,6 @@ class TradeManager:
         self.number_of_wins = 0
         self.number_of_losses = 0
 
-        # self.twm = ThreadedWebsocketManager(api_key=API_KEY, api_secret=API_SECRET)
-        # self.twm.start()
-        # self.user_socket = self.twm.start_futures_user_socket(callback=self.monitor_trades)
-        # event_loop = get_loop()
-        # event_loop.create_task(self.check_threshold_loop())
-        # event_loop.create_task(self.log_trades_loop())
-        # event_loop.create_task(self.monitor_orders_by_polling_api())
-        # event_loop.create_task(self.monitor_trades())
-
         check_threshold_loop = Thread(target=self.check_threshold_loop)
         check_threshold_loop.start()
 

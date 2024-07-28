@@ -43,7 +43,6 @@ if __name__ == '__main__':
 
     # Initialize Trade manager for order related tasks
     new_trade_loop = None
-    # event_loop = get_loop()
     TM = None
     if use_multiprocessing_for_trade_execution:
         new_trade_loop = multiprocessing.Process(target=start_new_trades_loop_multiprocess, args=(python_binance_client, signal_queue, print_trades_q, user_socket_q))
@@ -52,10 +51,8 @@ if __name__ == '__main__':
         TM = TradeManager(python_binance_client, signal_queue, print_trades_q, user_socket_q)
         new_trade_loop = Thread(target=TM.new_trades_loop)
         new_trade_loop.start()
-        # event_loop.create_task(TM.new_trades_loop())
 
     # Loop to ping the server & reconnect websockets
-    # event_loop.create_task(client.ping_server_reconnect_sockets(Bots))
     ping_server_reconnect_sockets_thread = Thread(target=client.ping_server_reconnect_sockets, args=(Bots,))
     ping_server_reconnect_sockets_thread.start()
 
@@ -64,7 +61,6 @@ if __name__ == '__main__':
         buffer_int = get_required_buffer()
         buffer = convert_buffer_to_string(buffer_int)
     # Combine data collected from websockets with historical data, so we have a buffer of data to calculate signals
-    # event_loop.create_task(client.combine_data(Bots, symbols_to_trade, buffer))
     combine_data_thread = Thread(target=client.combine_data, args=(Bots, symbols_to_trade, buffer,))
     combine_data_thread.start()
     if new_trade_loop is not None:
