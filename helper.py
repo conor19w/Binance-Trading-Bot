@@ -1,4 +1,4 @@
-import asyncio
+import time
 
 from binance.client import Client
 
@@ -137,23 +137,23 @@ class CustomClient:
     def send_to_user_socket_q(self, msg):
         self.user_socket_q.put(msg)
 
-    async def ping_server_reconnect_sockets(self, bots: [Bot]):
+    def ping_server_reconnect_sockets(self, bots: [Bot]):
         ''' Loop that runs constantly, it pings the server every 15 seconds, so we don't lose connection '''
         while True:
-            await asyncio.sleep(15)
+            time.sleep(15)
             self.client.futures_ping()
             for bot in bots:
                 if bot.socket_failed:
                     try:
-                        log.info(f"retry_websockets_job() - Attempting to reset socket for {bot.symbol}")
+                        log.info(f"ping_server_reconnect_sockets() - Attempting to reset socket for {bot.symbol}")
                         self.twm.stop_socket(bot.stream)
                         bot.stream = self.twm.start_kline_futures_socket(bot.handle_socket_message, symbol=bot.symbol)
                         bot.socket_failed = False
-                        log.info("retry_websockets_job() - Reset successful")
+                        log.info("ping_server_reconnect_sockets() - Reset successful")
                     except Exception as e:
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                        log.error(f"retry_websockets_job() - Error in resetting websocket for {bot.symbol}, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
+                        log.error(f"ping_server_reconnect_sockets() - Error in resetting websocket for {bot.symbol}, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
 
     def setup_bots(self, bots: [Bot], symbols_to_trade: [str], signal_queue, print_trades_q):
         ''' Function that initializes a Bot class for each symbol in our symbols_to_trade list / All symbols if trade_all_coins is True '''
@@ -190,16 +190,16 @@ class CustomClient:
                     log.warning(f"setup_bots() - Error occurred removing symbol, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
         log.info("setup_bots() - Bots have completed setup")
 
-    async def combine_data(self, bots: [Bot], symbols_to_trade: [str], buffer):
+    def combine_data(self, bots: [Bot], symbols_to_trade: [str], buffer):
         ''' Function that pulls in historical data, so we have candles for the Bot to start trading immediately '''
         log.info("combine_data() - Combining Historical and web socket data...")
         i = 0
         while i < len(bots):
-            await asyncio.sleep(1)
+            time.sleep(1)
             log.info(f"combine_data() - ({i + 1}/{len(bots)}) Gathering and combining data for {bots[i].symbol}...")
             time_open, time_close, open_temp, close_temp, high_temp, low_temp, volume_temp = self.get_historical(
                 symbol=bots[i].symbol, buffer=buffer)
-            await asyncio.sleep(1)
+            time.sleep(1)
             try:
                 time_open.pop(-1)
                 time_close.pop(-1)
@@ -211,7 +211,7 @@ class CustomClient:
                 bots[i].add_hist(time_open=time_open, time_close=time_close, open_price=open_temp, close_price=close_temp, high_price=high_temp,
                                  low_price=low_temp, volume_price=volume_temp)
                 i += 1
-                await asyncio.sleep(1)
+                time.sleep(1)
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]

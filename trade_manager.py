@@ -1,4 +1,5 @@
-import asyncio
+import time
+from threading import Thread
 
 from binance import ThreadedWebsocketManager
 from binance.client import Client
@@ -41,22 +42,34 @@ class TradeManager:
         self.number_of_wins = 0
         self.number_of_losses = 0
 
-        self.twm = ThreadedWebsocketManager(api_key=API_KEY, api_secret=API_SECRET)
+        # self.twm = ThreadedWebsocketManager(api_key=API_KEY, api_secret=API_SECRET)
         # self.twm.start()
-        self.user_socket = self.twm.start_futures_user_socket(callback=self.monitor_trades)
-        event_loop = get_loop()
-        event_loop.create_task(self.check_threshold_loop())
-        event_loop.create_task(self.log_trades_loop())
-        event_loop.create_task(self.monitor_orders_by_polling_api())
-        event_loop.create_task(self.monitor_trades())
+        # self.user_socket = self.twm.start_futures_user_socket(callback=self.monitor_trades)
+        # event_loop = get_loop()
+        # event_loop.create_task(self.check_threshold_loop())
+        # event_loop.create_task(self.log_trades_loop())
+        # event_loop.create_task(self.monitor_orders_by_polling_api())
+        # event_loop.create_task(self.monitor_trades())
 
-    async def monitor_orders_by_polling_api(self):
+        check_threshold_loop = Thread(target=self.check_threshold_loop)
+        check_threshold_loop.start()
+
+        log_trades_loop = Thread(target=self.log_trades_loop)
+        log_trades_loop.start()
+
+        monitor_orders_by_polling_api = Thread(target=self.monitor_orders_by_polling_api)
+        monitor_orders_by_polling_api.start()
+
+        monitor_trades = Thread(target=self.monitor_trades)
+        monitor_trades.start()
+
+    def monitor_orders_by_polling_api(self):
         '''
         Loop that runs constantly to catch trades that opened when packet loss occurs
         to ensure that SL & TPs are placed on all positions
         '''
         while True:
-            await asyncio.sleep(15)
+            time.sleep(15)
             open_positions = self.get_all_open_positions()
             if open_positions is not None:
                 continue
@@ -70,7 +83,7 @@ class TradeManager:
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 log.warning(f'monitor_orders_by_polling_api() - error occurred, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}')
 
-    async def new_trades_loop(self):
+    def new_trades_loop(self):
         ''' Loop that constantly runs and opens new trades as they come in '''
         while True:
             self.check_for_new_orders()
@@ -164,10 +177,10 @@ class TradeManager:
         account_info = self.client.futures_account()
         return float(account_info['totalMarginBalance']) > (float(account_info['totalWalletBalance']) * (1 - order_size / 100)) / leverage
 
-    async def check_threshold_loop(self):
+    def check_threshold_loop(self):
         ''' Checks if any trades have gone past our specified threshold in live_trading_config.py '''
         while True:
-            await asyncio.sleep(5)
+            time.sleep(15)
             self.check_trading_threshold()
             self.cancel_and_remove_trades()
 
@@ -405,7 +418,7 @@ class TradeManager:
         else:
             return False
 
-    async def log_trades_loop(self):
+    def log_trades_loop(self):
         ''' Loop that runs constantly and updates the logs for the user when something happens or when a new candle is received '''
         while True:
             self.log_trades()

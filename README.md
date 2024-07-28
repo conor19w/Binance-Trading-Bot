@@ -18,7 +18,7 @@ ___
 ---
 ### Running the live trading bot ###
 __Run strategies at your own risk I am not responsible for your trading decisions, futures are risky and proper risk management should be adhered to at all times__  
-Rename [`.env_sample`](.env_sample) to `.env` and add your API keys to this file
+Rename [`.env_sample`](.env) to `.env` and add your API keys to this file
 ```commandline
 python3 trading.py
 ```

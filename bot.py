@@ -40,7 +40,7 @@ class Bot:
         if self.index == 0:
             self.print_trades_q = print_trades_q
         if backtesting:
-            self.add_hist([], [], [], [], [], [])
+            self.add_hist([], [], [], [], [], [], [])
             self.update_indicators()
             self.update_tp_sl()
         self.first_interval = False
@@ -217,52 +217,56 @@ class Bot:
             case _:
                 return
 
-    @log.catch_errors()
     def add_hist(self, time_open: [int], time_close: [int], open_price: [float], close_price: [float], high_price: [float], low_price: [float], volume_price: [str]):
-        if not self.backtesting:
-            while not len(self.time_open) == 0:
-                if self.time_open[0] > time_open[-1]:
-                    time_open.append(self.time_open.pop(0))
-                    time_close.append(self.time_close.pop(0))
-                    open_price.append(self.open.pop(0))
-                    close_price.append(self.close.pop(0))
-                    high_price.append(self.high.pop(0))
-                    low_price.append(self.low.pop(0))
-                    volume_price.append(self.volume.pop(0))
-                elif self.time_open[0] == time_open[-1]:
-                    time_open[-1] = self.time_open.pop(0)
-                    time_close[-1] = self.time_close.pop(0)
-                    open_price[-1] = self.open.pop(0)
-                    close_price[-1] = self.close.pop(0)
-                    high_price[-1] = self.high.pop(0)
-                    low_price[-1] = self.low.pop(0)
-                    volume_price[-1] = self.volume.pop(0)
-                else:
-                    self.time_open.pop(0)
-                    self.time_close.pop(0)
-                    self.open.pop(0)
-                    self.close.pop(0)
-                    self.high.pop(0)
-                    self.low.pop(0)
-                    self.volume.pop(0)
-            self.time_open = time_open
-            self.open = open_price
-            self.close = close_price
-            self.high = high_price
-            self.low = low_price
-            self.volume = volume_price
-            
-        # TODO verify these are correct
-        self.close_h.append((self.open[0] + self.close[0] + self.low[0] + self.high[0]) / 4)
-        self.open_h.append((self.close[0] + self.open[0]) / 2)
-        self.high_h.append(self.high[0])
-        self.low_h.append(self.low[0])
-        for i in range(1, len(self.close)):
-            self.open_h.append((self.open_h[i-1] + self.close_h[i-1]) / 2)
-            self.close_h.append((self.open[i] + self.close[i] + self.low[i] + self.high[i]) / 4)
-            self.high_h.append(max(self.high[i], self.open_h[i], self.close_h[i]))
-            self.low_h.append(min(self.low[i], self.open_h[i], self.close_h[i]))
-        self.add_hist_complete = 1
+        try:
+            if not self.backtesting:
+                while not len(self.time_open) == 0:
+                    if self.time_open[0] > time_open[-1]:
+                        time_open.append(self.time_open.pop(0))
+                        time_close.append(self.time_close.pop(0))
+                        open_price.append(self.open.pop(0))
+                        close_price.append(self.close.pop(0))
+                        high_price.append(self.high.pop(0))
+                        low_price.append(self.low.pop(0))
+                        volume_price.append(self.volume.pop(0))
+                    elif self.time_open[0] == time_open[-1]:
+                        time_open[-1] = self.time_open.pop(0)
+                        time_close[-1] = self.time_close.pop(0)
+                        open_price[-1] = self.open.pop(0)
+                        close_price[-1] = self.close.pop(0)
+                        high_price[-1] = self.high.pop(0)
+                        low_price[-1] = self.low.pop(0)
+                        volume_price[-1] = self.volume.pop(0)
+                    else:
+                        self.time_open.pop(0)
+                        self.time_close.pop(0)
+                        self.open.pop(0)
+                        self.close.pop(0)
+                        self.high.pop(0)
+                        self.low.pop(0)
+                        self.volume.pop(0)
+                self.time_open = time_open
+                self.open = open_price
+                self.close = close_price
+                self.high = high_price
+                self.low = low_price
+                self.volume = volume_price
+
+            # TODO verify these are correct
+            self.close_h.append((self.open[0] + self.close[0] + self.low[0] + self.high[0]) / 4)
+            self.open_h.append((self.close[0] + self.open[0]) / 2)
+            self.high_h.append(self.high[0])
+            self.low_h.append(self.low[0])
+            for i in range(1, len(self.close)):
+                self.open_h.append((self.open_h[i-1] + self.close_h[i-1]) / 2)
+                self.close_h.append((self.open[i] + self.close[i] + self.low[i] + self.high[i]) / 4)
+                self.high_h.append(max(self.high[i], self.open_h[i], self.close_h[i]))
+                self.low_h.append(min(self.low[i], self.open_h[i], self.close_h[i]))
+            self.add_hist_complete = 1
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            log.error(f'{__name__}() - Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}')
 
     def handle_socket_message(self, msg):
         # TODO look at refactoring this
